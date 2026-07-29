@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karten scannen → Cardmarket</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+:root{
+  --bg:#f3f5f8;--surface:#fff;--surface2:#eaeef3;--ink:#16212e;--muted:#5b6b7b;--line:#d9e0e8;
+  --accent:#227d8e;--good:#2f9e57;--warn:#bd8118;--skip:#7a8896;--good-bg:#e7f4ec;--skip-bg:#eceff3;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:"SF Mono",ui-monospace,Menlo,monospace;}
+@media (prefers-color-scheme:dark){:root{--bg:#0d151f;--surface:#152030;--surface2:#1c293a;--ink:#e7eef5;
+  --muted:#93a3b4;--line:#26374a;--accent:#4bb6c9;--good:#3fb95a;--warn:#e0a83a;--skip:#6d7d8d;
+  --good-bg:#12321f;--skip-bg:#1a2634;}}
+:root[data-theme="light"]{--bg:#f3f5f8;--surface:#fff;--surface2:#eaeef3;--ink:#16212e;--muted:#5b6b7b;--line:#d9e0e8;--accent:#227d8e;--good:#2f9e57;--warn:#bd8118;--skip:#7a8896;--good-bg:#e7f4ec;--skip-bg:#eceff3;}
+:root[data-theme="dark"]{--bg:#0d151f;--surface:#152030;--surface2:#1c293a;--ink:#e7eef5;--muted:#93a3b4;--line:#26374a;--accent:#4bb6c9;--good:#3fb95a;--warn:#e0a83a;--skip:#6d7d8d;--good-bg:#12321f;--skip-bg:#1a2634;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;padding-bottom:88px}
+.wrap{max-width:1000px;margin:0 auto;padding:32px 20px 40px}
+header.top{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:22px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(1.7rem,4vw,2.4rem);margin:0;letter-spacing:-.01em}
+.lede{color:var(--muted);margin:.4rem 0 0;max-width:64ch}
+.controls{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:18px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.field input[type=text]{padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);
+  color:var(--ink);font-family:var(--mono);width:130px}
+.chk{display:flex;align-items:center;gap:8px;font-size:.9rem;padding-bottom:9px}
+.chk input{width:17px;height:17px;accent-color:var(--accent)}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:34px 20px;text-align:center;cursor:pointer;
+  color:var(--muted);transition:border-color .15s,background .15s;flex:1;min-width:220px}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--surface)} .drop b{color:var(--ink)}
+.drop input{display:none}
+.status{margin-top:16px;font-size:.95rem;color:var(--muted);min-height:1.4em}
+.status.err{color:#c0392b}
+.bar{height:6px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:10px;display:none}
+.bar.on{display:block} .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.summary{display:none;gap:12px;margin:22px 0 4px;flex-wrap:wrap}.summary.on{display:flex}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:88px}
+.stat b{display:block;font-family:var(--mono);font-size:1.35rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.stat.list b{color:var(--good)}.stat.skip b{color:var(--skip)}
+.grid{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:13px;overflow:hidden;
+  border-left:4px solid var(--line);display:flex;gap:12px;padding:12px}
+.card.s-list{border-left-color:var(--good)}.card.s-skip{border-left-color:var(--skip)}.card.off{opacity:.5}
+.faces{display:flex;gap:6px;flex:none}
+.faces img,.faces canvas{width:66px;height:92px;object-fit:cover;border-radius:6px;background:var(--surface2)}
+.info{flex:1;min-width:0}
+.info input.name{width:100%;font-family:var(--serif);font-size:1.05rem;padding:4px 6px;border:1px solid transparent;
+  border-radius:6px;background:transparent;color:var(--ink)}
+.info input.name:hover{border-color:var(--line)} .info input.name:focus{border-color:var(--accent);background:var(--surface2);outline:none}
+.meta{font-family:var(--mono);font-size:.8rem;color:var(--muted);margin-top:2px;min-height:1.1em}
+.row2{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:10px}
+.price{font-family:var(--mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
+.pill{font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:99px;text-transform:uppercase;letter-spacing:.03em}
+.p-list{background:var(--good-bg);color:var(--good)}.p-skip{background:var(--skip-bg);color:var(--skip)}
+.pick{width:17px;height:17px;accent-color:var(--accent)}
+.actionbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -4px 20px rgba(0,0,0,.1)}
+.actionbar .in{max-width:1000px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cnt{color:var(--muted)}.cnt b{color:var(--ink);font-family:var(--mono)}
+button.dl{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 22px;font-weight:600;cursor:pointer;font-size:.95rem}
+button.dl:disabled{opacity:.4;cursor:not-allowed}button.dl:hover:not(:disabled){filter:brightness(1.08)}
+.hint{font-size:.85rem;color:var(--muted);margin-top:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Karten scannen</h1>
+    <p class="lede">Je ein Foto pro Karte (Name gut sichtbar). Mehrere auf einmal auswählen — der Name wird
+      im Browser per OCR gelesen, Scryfall liefert Druck &amp; Preis, alles ab 1 € kommt in die Cardmarket-CSV.
+      <b>Namen unten editierbar</b> — tippen, Enter, neu gesucht.</p>
+    <div class="controls">
+      <label class="drop" id="drop"><input type="file" id="file" accept="image/*" capture="environment" multiple>
+        📷 &nbsp;<b>Fotos wählen / aufnehmen</b><br><span>eine Karte pro Foto — mehrere gleichzeitig ok</span></label>
+      <div class="field"><label for="set">Set (optional)</label>
+        <input type="text" id="set" placeholder="z. B. eoe" autocomplete="off"></div>
+      <label class="chk"><input type="checkbox" id="foil"> Foils</label>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="bar" id="bar"><i></i></div>
+  </header>
+
+  <div class="summary" id="summary">
+    <div class="stat list"><b id="s-list">0</b><span>listbar</span></div>
+    <div class="stat"><b id="s-sum">0,00 €</b><span>Summe</span></div>
+    <div class="stat skip"><b id="s-skip">0</b><span>raus/Bulk</span></div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p class="hint">Tipp: Set-Feld ausfüllen und pro Durchgang nur Karten aus diesem Set scannen — dann stimmt
+    der Druck (und damit der Preis) exakt. Foils vorher aussortieren und mit gesetztem Haken scannen.</p>
+</div>
+
+<div class="actionbar"><div class="in">
+  <div class="cnt"><b id="cnt">0</b> Karten · <b id="sum2">0,00</b>&nbsp;€ ausgewählt</div>
+  <button class="dl" id="dl" disabled>Cardmarket-CSV herunterladen</button>
+</div></div>
+
+<script>
+const NAMED="https://api.scryfall.com/cards/named";
+const HEADER=["Name","Set code","Foil","Rarity","Quantity","Purchase price","Condition","Language","Comment"];
+const $=id=>document.getElementById(id);
+const eur=n=>n.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
+let worker=null, CELLS=[];
+
+function singleCard(img){ // Einzelkarten-Foto -> {thumb, name-canvas}
+  const W=img.naturalWidth,H=img.naturalHeight;
+  const thumb=document.createElement("canvas");thumb.width=132;thumb.height=184;
+  thumb.getContext("2d").drawImage(img,0,0,W,H,0,0,132,184);
+  // Namensband: oberer Bereich der Karte (Karte fuellt das Foto)
+  const nx=W*0.06,ny=H*0.03,nw=W*0.88,nh=H*0.10,S=2;
+  const nc=document.createElement("canvas");nc.width=nw*S;nc.height=nh*S;
+  const g=nc.getContext("2d");g.drawImage(img,nx,ny,nw,nh,0,0,nc.width,nc.height);
+  const d=g.getImageData(0,0,nc.width,nc.height);
+  for(let p=0;p<d.data.length;p+=4){let v=0.3*d.data[p]+0.59*d.data[p+1]+0.11*d.data[p+2];
+    v=v>135?255:(v<75?0:v);d.data[p]=d.data[p+1]=d.data[p+2]=v;}
+  g.putImageData(d,0,0);
+  return {thumb,name:nc};
+}
+function cleanName(t){
+  let s=(t.split("\n")[0]||"").replace(/[^A-Za-z ,'’\-]/g," ").replace(/\s+/g," ").trim();
+  const keep=new Set(["of","to","the"]);          // kurze OCR-Rausch-Tokens raus, echte Kurzwoerter behalten
+  return s.split(" ").filter(w=>w.replace(/[^A-Za-z]/g,"").length>2||keep.has(w.toLowerCase())).join(" ").trim();
+}
+
+async function lookup(name){
+  if(!name) return null;
+  const set=$("set").value.trim().toLowerCase();
+  for(const url of [set?`${NAMED}?fuzzy=${encodeURIComponent(name)}&set=${set}`:null,
+                    `${NAMED}?fuzzy=${encodeURIComponent(name)}`]){
+    if(!url) continue;
+    try{const r=await fetch(url);if(!r.ok)continue;const c=await r.json();const p=c.prices||{};
+      return {name:(c.name||"").split(" // ")[0],set:(c.set||"").toUpperCase(),cn:c.collector_number||"",
+        rarity:c.rarity||"",eur:p.eur?+p.eur:null,eur_foil:p.eur_foil?+p.eur_foil:null,img:(c.image_uris||{}).small};
+    }catch(e){}
+  }
+  return null;
+}
+const priceOf=info=>!info?null:($("foil").checked?info.eur_foil:info.eur);
+
+async function process(files){
+  $("grid").innerHTML="";$("summary").classList.remove("on");$("status").className="status";CELLS=[];
+  if(!worker){$("status").textContent="OCR wird geladen …";worker=await Tesseract.createWorker("eng");}
+  $("bar").classList.add("on");const n=files.length;
+  for(let i=0;i<n;i++){
+    $("status").textContent=`Karte lesen … ${i+1}/${n}`;$("bar").firstElementChild.style.width=(100*i/n)+"%";
+    try{
+      const img=new Image();img.src=URL.createObjectURL(files[i]);await img.decode();
+      const {thumb,name}=singleCard(img);
+      const {data:{text}}=await worker.recognize(name);
+      const guess=cleanName(text);
+      const info=await lookup(guess);
+      CELLS.push({thumb,guess,info});
+    }catch(e){CELLS.push({thumb:document.createElement("canvas"),guess:"",info:null});}
+  }
+  $("bar").classList.remove("on");
+  $("status").textContent=`Fertig — ${n} Karten gelesen. Bitte prüfen; Namen editierbar.`;
+  render();
+}
+function statusOf(cell){const pr=priceOf(cell.info);
+  if(!cell.info) return {s:"skip",note:"nicht gefunden",list:false,price:null};
+  if(pr==null) return {s:"skip",note:$("foil").checked?"kein Foil-Preis":"kein Preis",list:false,price:null};
+  if(pr<1) return {s:"skip",note:eur(pr)+" € (Bulk)",list:false,price:pr};
+  return {s:"list",note:"ab 1 €",list:true,price:Math.max(1,pr)};}
+
+function render(){
+  const grid=$("grid");grid.innerHTML="";
+  CELLS.forEach((cell,i)=>{const st=statusOf(cell);cell._st=st;
+    const el=document.createElement("div");el.className="card s-"+st.s;el.dataset.i=i;
+    const ref=cell.info&&cell.info.img?`<img src="${cell.info.img}" alt="Referenz">`:`<canvas></canvas>`;
+    const shown=(cell.info?cell.info.name:cell.guess||"").replace(/"/g,'&quot;');
+    el.innerHTML=`<div class="faces"></div>
+      <div class="info">
+        <input class="name" value="${shown}" spellcheck="false" placeholder="Name eintippen …">
+        <div class="meta">${cell.info?cell.info.set+" · #"+cell.info.cn+" · "+cell.info.rarity:"—"}</div>
+        <div class="row2">
+          <span class="price">${st.price!=null?eur(st.price)+" €":"—"}</span>
+          <span class="pill p-${st.s}">${st.note}</span>
+          <label><input type="checkbox" class="pick" ${st.list?"checked":""}></label>
+        </div></div>`;
+    const faces=el.querySelector(".faces");
+    if(cell.thumb&&cell.thumb.width) faces.appendChild(cell.thumb.cloneNode(true));
+    const rw=document.createElement("div");rw.innerHTML=ref;faces.appendChild(rw.firstChild);
+    grid.appendChild(el);
+    el.querySelector(".name").addEventListener("keydown",async e=>{if(e.key==="Enter"){e.preventDefault();
+      e.target.blur();cell.guess=e.target.value.trim();
+      e.target.parentElement.querySelector(".meta").textContent="suche …";
+      cell.info=await lookup(cell.guess);render();}});
+    el.querySelector(".pick").addEventListener("change",sync);
+  });
+  $("summary").classList.add("on");sync();
+}
+function sync(){let n=0,s=0,skip=0;
+  document.querySelectorAll("#grid .card").forEach(el=>{const cell=CELLS[+el.dataset.i],st=cell._st;
+    const chk=el.querySelector(".pick");el.classList.toggle("off",!chk.checked);
+    if(chk.checked){n++;s+=st.price||0;} if(!st.list)skip++;});
+  $("s-list").textContent=n;$("s-sum").textContent=eur(s)+" €";$("s-skip").textContent=skip;
+  $("cnt").textContent=n;$("sum2").textContent=eur(s);$("dl").disabled=n===0;}
+
+function field(v){v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+$("dl").addEventListener("click",()=>{const out=[HEADER.join(",")];const foil=$("foil").checked;
+  document.querySelectorAll("#grid .card").forEach(el=>{const chk=el.querySelector(".pick");if(!chk.checked)return;
+    const cell=CELLS[+el.dataset.i],info=cell.info,st=cell._st;
+    out.push([info.name,info.set,foil?"true":"normal",info.rarity,1,st.price.toFixed(2),
+      "near_mint","en","#"+info.cn].map(field).join(","));});
+  const b=new Blob([out.join("\n")],{type:"text/csv"});const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download="cardmarket.csv";a.click();URL.revokeObjectURL(a.href);});
+
+const drop=$("drop");
+$("file").addEventListener("change",e=>{if(e.target.files.length)process(e.target.files);});
+["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{if(e.dataTransfer.files.length)process(e.dataTransfer.files);});
+</script>
+</body>
+</html>
