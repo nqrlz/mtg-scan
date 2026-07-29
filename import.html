@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sammlung → Cardmarket-CSV</title>
+<style>
+:root{
+  --bg:#f3f5f8; --surface:#fff; --surface2:#eaeef3; --ink:#16212e; --muted:#5b6b7b;
+  --line:#d9e0e8; --accent:#227d8e; --good:#2f9e57; --warn:#bd8118; --skip:#7a8896;
+  --good-bg:#e7f4ec; --skip-bg:#eceff3;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0d151f; --surface:#152030; --surface2:#1c293a; --ink:#e7eef5; --muted:#93a3b4;
+  --line:#26374a; --accent:#4bb6c9; --good:#3fb95a; --warn:#e0a83a; --skip:#6d7d8d;
+  --good-bg:#12321f; --skip-bg:#1a2634;
+}}
+:root[data-theme="light"]{--bg:#f3f5f8;--surface:#fff;--surface2:#eaeef3;--ink:#16212e;--muted:#5b6b7b;--line:#d9e0e8;--accent:#227d8e;--good:#2f9e57;--warn:#bd8118;--skip:#7a8896;--good-bg:#e7f4ec;--skip-bg:#eceff3;}
+:root[data-theme="dark"]{--bg:#0d151f;--surface:#152030;--surface2:#1c293a;--ink:#e7eef5;--muted:#93a3b4;--line:#26374a;--accent:#4bb6c9;--good:#3fb95a;--warn:#e0a83a;--skip:#6d7d8d;--good-bg:#12321f;--skip-bg:#1a2634;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
+  -webkit-font-smoothing:antialiased;padding-bottom:88px}
+.wrap{max-width:960px;margin:0 auto;padding:32px 20px 40px}
+header.top{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(1.7rem,4vw,2.4rem);margin:0;letter-spacing:-.01em}
+.lede{color:var(--muted);margin:.4rem 0 0;max-width:62ch}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;font-size:.85rem;color:var(--muted)}
+.steps b{color:var(--ink)}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:40px 20px;text-align:center;
+  cursor:pointer;transition:border-color .15s,background .15s;color:var(--muted)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--surface)}
+.drop b{color:var(--ink);font-size:1.05rem}
+.drop input{display:none}
+.status{margin-top:18px;font-size:.95rem;color:var(--muted);min-height:1.4em}
+.bar{height:6px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:10px;display:none}
+.bar.on{display:block} .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.summary{display:none;gap:12px;margin:22px 0 8px;flex-wrap:wrap}
+.summary.on{display:flex}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:90px}
+.stat b{display:block;font-family:var(--mono);font-size:1.4rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.stat.list b{color:var(--good)} .stat.skip b{color:var(--skip)}
+.tablewrap{overflow-x:auto;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+  padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.off td{opacity:.4}
+.nm{font-family:var(--serif);font-size:1.02rem}
+.mut{font-family:var(--mono);font-size:.82rem;color:var(--muted)}
+.pr{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.fo{display:inline-block;font-size:.7rem;font-weight:700;color:var(--warn);border:1px solid var(--warn);
+  border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:middle}
+input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
+.actionbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  box-shadow:0 -4px 20px rgba(0,0,0,.1)}
+.actionbar .in{max-width:960px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;
+  justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cnt{color:var(--muted)} .cnt b{color:var(--ink);font-family:var(--mono);font-variant-numeric:tabular-nums}
+button.dl{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 22px;
+  font-family:var(--sans);font-size:.95rem;font-weight:600;cursor:pointer}
+button.dl:disabled{opacity:.4;cursor:not-allowed} button.dl:hover:not(:disabled){filter:brightness(1.08)}
+details{margin-top:20px;font-size:.9rem;color:var(--muted)} details summary{cursor:pointer;color:var(--accent)}
+.err{color:#c0392b}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Sammlung → Cardmarket</h1>
+    <p class="lede">CSV-Export aus <b>ManaBox</b> oder <b>Delver Lens</b> hier reinziehen. Das Tool holt die
+      aktuellen Cardmarket-Preise von Scryfall, filtert alles ab 1 € und erzeugt die fertige
+      CSV für die <b>cardmarket-bulk-import</b>-Erweiterung.<br>
+      Keine App? <a href="index.html" style="color:var(--accent)">← Karten stattdessen per Foto scannen</a></p>
+    <div class="steps"><span><b>1.</b> Sammlung in der App als CSV exportieren</span>
+      <span><b>2.</b> Datei hier laden</span>
+      <span><b>3.</b> prüfen &amp; Cardmarket-CSV herunterladen</span></div>
+  </header>
+
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept=".csv,text/csv">
+    📄 &nbsp;<b>CSV auswählen oder hierher ziehen</b><br>
+    <span>ManaBox- oder Delver-Lens-Export (mit Scryfall-ID)</span>
+  </label>
+  <div class="status" id="status"></div>
+  <div class="bar" id="bar"><i></i></div>
+
+  <div class="summary" id="summary">
+    <div class="stat list"><b id="s-list">0</b><span>listbar</span></div>
+    <div class="stat"><b id="s-sum">0,00 €</b><span>Summe</span></div>
+    <div class="stat skip"><b id="s-skip">0</b><span>Bulk / raus</span></div>
+  </div>
+  <div class="tablewrap"><table id="table" hidden><thead><tr>
+    <th></th><th>Karte</th><th>Edition · #</th><th>Zustand</th><th>Menge</th><th>Preis</th>
+  </tr></thead><tbody id="tbody"></tbody></table></div>
+
+  <details id="skipbox" hidden><summary>Übersprungene Karten anzeigen</summary><div id="skiplist"></div></details>
+</div>
+
+<div class="actionbar"><div class="in">
+  <div class="cnt"><b id="cnt">0</b> Positionen · <b id="sum2">0,00</b>&nbsp;€ ausgewählt</div>
+  <button class="dl" id="dl" disabled>Cardmarket-CSV herunterladen</button>
+</div></div>
+
+<script>
+const API="https://api.scryfall.com/cards/collection";
+const HEADER=["Name","Set code","Foil","Rarity","Quantity","Purchase price","Condition","Language","Comment"];
+const FOIL_TRUE=new Set(["foil","etched","true","1","yes","y","holo"]);
+const COND={mint:"mint",m:"mint",near_mint:"near_mint",nearmint:"near_mint",nm:"near_mint","near mint":"near_mint",
+  excellent:"excellent",ex:"excellent",good:"good",gd:"good",light_played:"light_played",lightly_played:"light_played",
+  lp:"light_played",played:"played",pl:"played",poor:"poor",po:"poor"};
+const HCOL={id:["scryfall id","scryfall_id","scryfallid","id"],qty:["quantity","count","qty","amount"],
+  foil:["foil","finish","printing","is_foil"],condition:["condition","cond","grade"],language:["language","lang"],
+  set:["set code","set_code","set","edition","setcode"],cn:["collector number","collector_number","card number","number","cn"]};
+
+const $=id=>document.getElementById(id);
+const eur=n=>n.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
+
+function parseCSV(text){
+  const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else{ if(c==='"')q=true; else if(c===',' ){row.push(cur);cur="";}
+      else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur="";}
+      else if(c!=='\r')cur+=c; }
+  }
+  if(cur.length||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(c=>c.trim()));
+}
+function pick(header,keys){const h=header.map(x=>x.trim().toLowerCase());
+  for(const k of keys){const i=h.indexOf(k);if(i>=0)return i;} return -1;}
+
+function readCollection(rows){
+  const header=rows[0];const idx={};for(const k in HCOL)idx[k]=pick(header,HCOL[k]);
+  if(idx.id<0 && (idx.set<0||idx.cn<0)) throw new Error("Export braucht 'Scryfall ID' ODER 'Set code' + 'Collector number'.");
+  const lines=[];
+  for(let r=1;r<rows.length;r++){const row=rows[r];const g=k=>idx[k]>=0&&idx[k]<row.length?row[idx[k]].trim():"";
+    const ident = idx.id>=0&&g("id") ? {id:g("id")} : {set:g("set").toLowerCase(),collector_number:g("cn")};
+    lines.push({identifier:ident, quantity:parseInt(g("qty"))||1, foil:FOIL_TRUE.has(g("foil").toLowerCase()),
+      condition:COND[g("condition").toLowerCase().replace(/ /g,"_")]||"near_mint",
+      language:(g("language")||"en").toLowerCase().slice(0,2)});
+  }
+  return lines;
+}
+async function fetchPrices(lines,onProg){
+  const map=new Map();
+  for(let i=0;i<lines.length;i+=75){
+    const batch=lines.slice(i,i+75).map(l=>l.identifier);
+    const res=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({identifiers:batch})});
+    if(!res.ok) throw new Error("Scryfall-Fehler "+res.status);
+    const data=await res.json();
+    for(const c of data.data||[]){const p=c.prices||{};
+      const info={name:(c.name||"").split(" // ")[0],set:(c.set||"").toUpperCase(),cn:c.collector_number||"",
+        rarity:c.rarity||"",eur:p.eur?parseFloat(p.eur):null,eur_foil:p.eur_foil?parseFloat(p.eur_foil):null};
+      map.set(c.id,info); map.set(info.set+"|"+info.cn,info);
+    }
+    onProg(Math.min(i+75,lines.length),lines.length);
+    if(i+75<lines.length) await new Promise(r=>setTimeout(r,90));
+  }
+  return map;
+}
+const keyOf=l=> l.identifier.id ? l.identifier.id : (l.identifier.set.toUpperCase()+"|"+l.identifier.collector_number);
+
+let LIST=[];
+async function handle(file){
+  $("summary").classList.remove("on");$("table").hidden=true;$("skipbox").hidden=true;
+  $("status").className="status";$("status").textContent="Lese "+file.name+" …";
+  try{
+    const lines=readCollection(parseCSV(await file.text()));
+    $("status").textContent=lines.length+" Positionen gefunden — hole Preise von Scryfall …";
+    $("bar").classList.add("on");
+    const map=await fetchPrices(lines,(d,t)=>{$("bar").firstElementChild.style.width=(100*d/t)+"%";
+      $("status").textContent=`Preise laden … ${d}/${t}`;});
+    $("bar").classList.remove("on");
+    const rows=[],skipped=[];
+    for(const l of lines){const info=map.get(keyOf(l));
+      if(!info){skipped.push(["Unbekannt","","nicht bei Scryfall gefunden"]);continue;}
+      const price=l.foil?info.eur_foil:info.eur;
+      if(price==null){skipped.push([info.name,"",(l.foil?"kein Foil-Preis":"kein Preis")]);continue;}
+      if(price<1){skipped.push([info.name,eur(price)+" €","Bulk (unter 1 €)"]);continue;}
+      rows.push({name:info.name,set:info.set,foil:l.foil,rarity:info.rarity,qty:l.quantity,
+        price:Math.max(1,price),cond:l.condition,lang:l.language,cn:info.cn});
+    }
+    LIST=rows; render(rows,skipped);
+  }catch(e){$("status").className="status err";$("status").textContent="Fehler: "+e.message;$("bar").classList.remove("on");}
+}
+function render(rows,skipped){
+  const tb=$("tbody");tb.innerHTML="";
+  rows.forEach((r,i)=>{const tr=document.createElement("tr");
+    tr.innerHTML=`<td><input type="checkbox" checked data-i="${i}"></td>
+      <td class="nm">${esc(r.name)}${r.foil?'<span class="fo">FOIL</span>':''}</td>
+      <td class="mut">${r.set} · #${esc(r.cn)}</td><td class="mut">${r.cond}</td>
+      <td class="mut">${r.qty}</td><td class="pr">${eur(r.price)} €</td>`;
+    tb.appendChild(tr);});
+  $("table").hidden=rows.length===0;
+  tb.querySelectorAll("input").forEach(c=>c.addEventListener("change",sync));
+  const sk=$("skiplist");sk.innerHTML=skipped.map(s=>`${esc(s[0])} <span class="mut">${s[1]} — ${s[2]}</span>`).join("<br>");
+  $("skipbox").hidden=skipped.length===0;$("s-skip").textContent=skipped.length;
+  $("summary").classList.add("on");sync();
+}
+function sync(){let n=0,s=0;
+  document.querySelectorAll("#tbody input").forEach(c=>{const r=LIST[+c.dataset.i];
+    c.closest("tr").classList.toggle("off",!c.checked);
+    if(c.checked){n++;s+=r.price*r.qty;}});
+  $("s-list").textContent=n;$("s-sum").textContent=eur(s)+" €";
+  $("cnt").textContent=n;$("sum2").textContent=eur(s);$("dl").disabled=n===0;
+}
+function field(v){v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+$("dl").addEventListener("click",()=>{
+  const out=[HEADER.join(",")];
+  document.querySelectorAll("#tbody input").forEach(c=>{if(!c.checked)return;const r=LIST[+c.dataset.i];
+    out.push([r.name,r.set,r.foil?"true":"normal",r.rarity,r.qty,r.price.toFixed(2),r.cond,r.lang,"#"+r.cn].map(field).join(","));});
+  const b=new Blob([out.join("\n")],{type:"text/csv"});const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download="cardmarket.csv";a.click();URL.revokeObjectURL(a.href);
+});
+function esc(s){return String(s).replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));}
+
+const drop=$("drop"),file=$("file");
+file.addEventListener("change",e=>{if(e.target.files[0])handle(e.target.files[0]);});
+["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)handle(f);});
+</script>
+</body>
+</html>
