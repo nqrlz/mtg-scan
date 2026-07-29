@@ -6,7 +6,7 @@ Preise/Erkennung laufen live über die CORS-fähige Scryfall-API direkt im Brows
 ## [index.html](index.html) — Foto-Scan (Kernfunktion)
 Je **ein Foto pro Karte** (mehrere gleichzeitig auswählbar). Ablauf:
 1. Karten fotografieren (eine pro Bild, Name gut sichtbar).
-2. Alle Fotos in `scan.html` laden. **Set-Feld** ausfüllen und pro Durchgang nur Karten *aus diesem Set*
+2. Alle Fotos in `index.html` (bzw. auf der Live-Seite) laden. **Set-Feld** ausfüllen und pro Durchgang nur Karten *aus diesem Set*
    scannen → exakter Druck & Preis. **Foils**-Haken für Foil-Batches.
 3. OCR liest die Namen im Browser (`tesseract.js`), Scryfall liefert Druck & Preis.
    Nicht/falsch gelesene Namen unten **antippen und tippen** (Enter → neu gesucht).
@@ -19,7 +19,7 @@ sonst greift die Fuzzy-Suche irgendeinen Druck.
 
 ## [import.html](import.html) — CSV-Import (Alternative, ohne Foto)
 Falls du eine Sammlung schon in **ManaBox / Delver Lens** gescannt hast: deren CSV-Export hier laden
-(enthält Scryfall-IDs → exakte Drucke). Preis-Filter + Cardmarket-CSV wie bei scan.html, aber ohne OCR
+(enthält Scryfall-IDs → exakte Drucke). Preis-Filter + Cardmarket-CSV wie beim Foto-Scanner, aber ohne OCR
 und ohne die Set-/Erkennungs-Unsicherheit.
 
 ## Ausliefern (gratis, ohne Kreditkarte)
